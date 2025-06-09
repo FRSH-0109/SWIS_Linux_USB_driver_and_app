@@ -12,12 +12,12 @@ int main() {
     }
 
     // Write command to device
-    // const char *msg = "HELLO_DEVICE";
-    // if (write(fd, msg, strlen(msg)) < 0) {
-    //     perror("write");
-    //     close(fd);
-    //     return 1;
-    // }
+    const char *msg = "HELLO_DEVICE";
+    if (write(fd, msg, strlen(msg)) < 0) {
+        perror("write");
+        close(fd);
+        return 1;
+    }
 
     // Read response from device
     char buffer[64] = {0};

@@ -124,13 +124,22 @@ static ssize_t vendor_write(struct file *file, const char __user *user_buffer, s
     pr_info("VENDOR USB device write: length: %d\n", wrote_cnt);
     struct usb_vendor *dev = file->private_data;
     int retval;
-    char buf[MAX_PKT_SIZE];
+    char *buf;
 
     if (!dev)
         return -ENODEV;
 
-    if (copy_from_user(buf, user_buffer, wrote_cnt))
+    if (wrote_cnt == 0)
+        return 0;
+
+    buf = kmalloc(MAX_PKT_SIZE, GFP_KERNEL);
+    if (!buf)
+        return -ENOMEM;
+
+    if (copy_from_user(buf, user_buffer, wrote_cnt)) {
+        kfree(buf);
         return -EFAULT;
+    }
 
     retval = usb_interrupt_msg(dev->udev,
                           usb_sndintpipe(dev->udev, dev->irq_out_endpointAddr),
@@ -139,6 +148,7 @@ static ssize_t vendor_write(struct file *file, const char __user *user_buffer, s
                           NULL,
                           1000);
     
+    kfree(buf);
     pr_info("VENDOR USB device write: length: %d\n", wrote_cnt);
     return retval ? retval : wrote_cnt;
 }
