@@ -11,6 +11,10 @@
 static int vendor_probe(struct usb_interface *interface, const struct usb_device_id *id);
 static void vendor_disconnect(struct usb_interface *interface);
 
+static void vendor_out_timer_func(struct timer_list *t);
+static void vendor_out_work_func(struct work_struct *work);
+static void interrupt_in_callback(struct urb *urb);
+
 /* Meta information*/
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Kamil Kośnik");
@@ -32,7 +36,22 @@ struct usb_vendor {
     size_t irq_in_size;
     __u8 irq_in_endpointAddr;
     __u8 irq_out_endpointAddr;
-    struct mutex io_mutex;
+    int bInterval_out_endpoint;
+
+    // For interrupt transfers
+    unsigned char *int_in_buffer;
+    struct urb *int_in_urb;
+    size_t int_in_size;
+
+    // Shared data for userspace
+    unsigned char latest_data[MAX_PKT_SIZE];
+    size_t latest_length;
+    struct mutex data_lock;
+
+    /* Data request staff sent to USB device periodically*/
+    struct timer_list out_timer;
+    struct work_struct out_work;
+    int POLLING_INTERVAL_MS; // Polling interval in ms
 };
 
 static struct usb_class_driver vendor_class = {
@@ -83,43 +102,42 @@ static int vendor_release(struct inode *inode, struct file *file)
 
 static ssize_t vendor_read(struct file *file, char __user *buffer, size_t count, loff_t *ppos)
 {
-    int actual_length = 0;
-    pr_info("VENDOR USB device read: length: %d\n", actual_length);
     struct usb_vendor *dev = file->private_data;
-    int retval;
     
     if (!dev) {
         pr_info("VENDOR USB device read: errr 1\n");
         return -ENODEV;
     }
-
+    
     if (count > MAX_PKT_SIZE)
         count = MAX_PKT_SIZE;
 
-    retval = usb_interrupt_msg(dev->udev,
-                          usb_rcvintpipe(dev->udev, dev->irq_in_endpointAddr),
-                          dev->irq_in_buffer,
-                          count,
-                          &actual_length,
-                          1000);
-
-    if (retval) {
-        pr_info("VENDOR USB device read: errr 2\n");
-        return retval;
+    mutex_lock(&dev->data_lock);
+    if (dev->latest_length == 0) {
+        mutex_unlock(&dev->data_lock);
+        return 0; // No new data
+    }
+    else if (count > dev->latest_length) {
+        count = dev->latest_length; // Limit to available data length
     }
 
-
-    if (copy_to_user(buffer, dev->irq_in_buffer, actual_length)) {
-        pr_info("VENDOR USB device read: errr 2\n");
+    if (copy_to_user(buffer, dev->latest_data, count)) {
+        mutex_unlock(&dev->data_lock);
         return -EFAULT;
     }
+
+    dev->latest_length = 0; // Consume data after read
+    mutex_unlock(&dev->data_lock);
     
-    pr_info("VENDOR USB device read: length: %d\n", actual_length);
-    return actual_length;
+    pr_info("VENDOR USB device read: length: %d\n", (int)count);
+    return count;
 }
 
 static ssize_t vendor_write(struct file *file, const char __user *user_buffer, size_t count, loff_t *ppos)
 {
+    pr_info("VENDOR USB device write: NOT IMPLEMENTED");
+    return 0; // Not implemented, cause timer handles data sending
+
     int wrote_cnt = min((size_t)MAX_PKT_SIZE, count);
     pr_info("VENDOR USB device write: length: %d\n", wrote_cnt);
     struct usb_vendor *dev = file->private_data;
@@ -182,6 +200,7 @@ static int vendor_probe(struct usb_interface *interface, const struct usb_device
         if (!dev->irq_in_endpointAddr &&
             usb_endpoint_is_int_in(endpoint)) {
             dev->irq_in_size = endpoint->wMaxPacketSize;
+            dev->int_in_size = endpoint->wMaxPacketSize;
             dev->irq_in_endpointAddr = endpoint->bEndpointAddress;
             dev->irq_in_buffer = kmalloc(dev->irq_in_size, GFP_KERNEL);
         }
@@ -189,6 +208,7 @@ static int vendor_probe(struct usb_interface *interface, const struct usb_device
         if (!dev->irq_out_endpointAddr &&
             usb_endpoint_is_int_out(endpoint)) {
             dev->irq_out_endpointAddr = endpoint->bEndpointAddress;
+            dev->bInterval_out_endpoint = endpoint->bInterval; // Polling interval in ms
         }
     }
 
@@ -198,9 +218,31 @@ static int vendor_probe(struct usb_interface *interface, const struct usb_device
     }
 
     usb_set_intfdata(interface, dev);
-    mutex_init(&dev->io_mutex);
+
+    mutex_init(&dev->data_lock);
+    dev->int_in_buffer = kmalloc(dev->int_in_size, GFP_KERNEL);
+    dev->int_in_urb = usb_alloc_urb(0, GFP_KERNEL);
+
+    usb_fill_int_urb(dev->int_in_urb,
+                    dev->udev,
+                    usb_rcvintpipe(dev->udev, dev->irq_in_endpointAddr),
+                    dev->int_in_buffer,
+                    dev->int_in_size,
+                    interrupt_in_callback,
+                    dev,
+                    dev->bInterval_out_endpoint);        // From descriptor: polling interval in ms
+    
+    usb_submit_urb(dev->int_in_urb, GFP_KERNEL);
 
     vendor_class.fops = &vendor_fops;
+
+    /* Data polling from device */
+    dev->POLLING_INTERVAL_MS = 1000;    // Polling interval in ms
+    INIT_WORK(&dev->out_work, vendor_out_work_func);
+    timer_setup(&dev->out_timer, vendor_out_timer_func, 0);
+    // Kick off first timer
+    mod_timer(&dev->out_timer, jiffies + msecs_to_jiffies(dev->POLLING_INTERVAL_MS));
+
     return usb_register_dev(interface, &vendor_class);
 }
 
@@ -211,6 +253,12 @@ static void vendor_disconnect(struct usb_interface *interface) {
     usb_deregister_dev(interface, &vendor_class);
     kfree(dev->irq_in_buffer);
     kfree(dev);
+    usb_kill_urb(dev->int_in_urb);
+    usb_free_urb(dev->int_in_urb);
+    kfree(dev->int_in_buffer);
+    del_timer_sync(&dev->out_timer);
+    cancel_work_sync(&dev->out_work);
+    mutex_destroy(&dev->data_lock);
 }
 
 static int __init my_init(void) {
@@ -232,3 +280,56 @@ static void __exit my_exit(void) {
 
 module_init(my_init);
 module_exit(my_exit);
+
+/* Fucntion for handling data request timer callback */
+static void vendor_out_timer_func(struct timer_list *t)
+{
+    struct usb_vendor *dev = from_timer(dev, t, out_timer);
+
+    pr_warn("TIMERRRRRR\n");
+    schedule_work(&dev->out_work); // schedule OUT transfer
+
+    // restart timer
+    mod_timer(&dev->out_timer, jiffies + msecs_to_jiffies(dev->POLLING_INTERVAL_MS));
+}
+
+/* Worker function for data request sending*/
+static void vendor_out_work_func(struct work_struct *work)
+{
+    struct usb_vendor *dev = container_of(work, struct usb_vendor, out_work);
+    unsigned char cmd[8] = { 'S', 'E' , 'N', 'D', '!', 0}; // request command
+    int retval;
+
+    pr_warn("WOKRERRRR\n");
+    retval = usb_interrupt_msg(dev->udev,
+                  usb_sndintpipe(dev->udev, dev->irq_out_endpointAddr),
+                  cmd, sizeof(cmd), NULL, 1000);
+
+    if (retval)
+        pr_err("USB OUT transfer failed: %d\n", retval);
+    else
+        pr_debug("USB OUT transfer sent.\n");
+}
+
+// callback function for interrupt IN URB
+static void interrupt_in_callback(struct urb *urb)
+{
+    struct usb_vendor *dev = urb->context;
+
+    if (urb->status == 0) {
+        pr_info("USB INT POLL: %d bytes: %*ph\n", urb->actual_length, urb->actual_length, dev->int_in_buffer);
+        mutex_lock(&dev->data_lock);
+        if (urb->actual_length > MAX_PKT_SIZE) {
+            pr_warn("Received data exceeds buffer size, truncating\n");
+            urb->actual_length = MAX_PKT_SIZE;
+        }
+        memcpy(dev->latest_data, dev->int_in_buffer, urb->actual_length);
+        dev->latest_length = urb->actual_length;
+        mutex_unlock(&dev->data_lock);
+    } else {
+        pr_err("INT URB error: %d\n", urb->status);
+    }
+
+    // Re-submit URB to continue polling
+    usb_submit_urb(dev->int_in_urb, GFP_ATOMIC);
+}
