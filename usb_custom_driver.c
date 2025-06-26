@@ -29,6 +29,8 @@ MODULE_VERSION("0.1");
 #define EP_OUT 0x01  // IRQ OUT endpoint address
 #define MAX_PKT_SIZE 64
 
+const char CMD_SHTC3_READ[] = "SHTC3 READ";
+
 struct usb_vendor {
     struct usb_device *udev;
     struct usb_interface *interface;
@@ -37,6 +39,8 @@ struct usb_vendor {
     __u8 irq_in_endpointAddr;
     __u8 irq_out_endpointAddr;
     int bInterval_out_endpoint;
+
+    unsigned char cmd[64];
 
     // For interrupt transfers
     unsigned char *int_in_buffer;
@@ -297,13 +301,13 @@ static void vendor_out_timer_func(struct timer_list *t)
 static void vendor_out_work_func(struct work_struct *work)
 {
     struct usb_vendor *dev = container_of(work, struct usb_vendor, out_work);
-    unsigned char cmd[8] = { 'S', 'E' , 'N', 'D', '!', 0}; // request command
+    memcpy(dev->cmd, CMD_SHTC3_READ, sizeof(CMD_SHTC3_READ));
     int retval;
 
     pr_warn("WOKRERRRR\n");
     retval = usb_interrupt_msg(dev->udev,
                   usb_sndintpipe(dev->udev, dev->irq_out_endpointAddr),
-                  cmd, sizeof(cmd), NULL, 1000);
+                  dev->cmd, sizeof(dev->cmd), NULL, 1000);
 
     if (retval)
         pr_err("USB OUT transfer failed: %d\n", retval);

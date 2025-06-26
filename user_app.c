@@ -24,6 +24,7 @@ int main() {
     int n = 0;
     for (int i = 0; i < 100; i++) {
         n = read(fd, buffer, sizeof(buffer));
+        printf("N %d\n", n);
         if (n < 0) {
             perror("read");
             close(fd);
@@ -35,7 +36,11 @@ int main() {
         sleep(10);
     }
     
-    printf("Device response %d: [%.*s]\n", n, n, buffer);
+    float temp = 0.0;
+    float hum = 0.0;
+    memcpy(&temp, buffer, sizeof(float));
+    memcpy(&hum, &buffer[4], sizeof(float));
+    printf("Device response: Temp: %.3f, Hum: %.3f\n", temp, hum);
     close(fd);
     return 0;
 }
