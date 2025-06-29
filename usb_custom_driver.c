@@ -107,12 +107,12 @@ static int vendor_release(struct inode *inode, struct file *file)
 static ssize_t vendor_read(struct file *file, char __user *buffer, size_t count, loff_t *ppos)
 {
     struct usb_vendor *dev = file->private_data;
-    
+
     if (!dev) {
         pr_info("VENDOR USB device read: errr 1\n");
         return -ENODEV;
     }
-    
+
     if (count > MAX_PKT_SIZE)
         count = MAX_PKT_SIZE;
 
@@ -132,7 +132,7 @@ static ssize_t vendor_read(struct file *file, char __user *buffer, size_t count,
 
     dev->latest_length = 0; // Consume data after read
     mutex_unlock(&dev->data_lock);
-    
+
     pr_info("VENDOR USB device read: length: %d\n", (int)count);
     return count;
 }
@@ -169,7 +169,7 @@ static ssize_t vendor_write(struct file *file, const char __user *user_buffer, s
                           wrote_cnt,
                           NULL,
                           1000);
-    
+
     kfree(buf);
     pr_info("VENDOR USB device write: length: %d\n", wrote_cnt);
     return retval ? retval : wrote_cnt;
@@ -235,7 +235,7 @@ static int vendor_probe(struct usb_interface *interface, const struct usb_device
                     interrupt_in_callback,
                     dev,
                     dev->bInterval_out_endpoint);        // From descriptor: polling interval in ms
-    
+
     usb_submit_urb(dev->int_in_urb, GFP_KERNEL);
 
     vendor_class.fops = &vendor_fops;
