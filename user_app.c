@@ -29,6 +29,9 @@ int main(int argc, char* argv[]) {
     while ((character = getopt(argc, argv, options)) != -1) {
         switch(character)
         {
+            case 's':
+                printf("Here place a device state getter!\n");
+                break;
             case 'd':
                 printf("Here place a measurment on demand!\n");
                 break;
