@@ -2,6 +2,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
+
+#define SHTC3_CMD_READ_DATA					"SHTC3 READ"
+#define SHTC3_CMD_READ_STATE				"SHTC3 STATE"
+#define SHTC3_CMD_SET_PERIOD				"SHTC3 PERIOD:"
+#define SHTC3_CMD_SET_SINGLE				"SHTC3 SINGLE"
+uint32_t period = 1000;
 
 void print_getopt_state(void) {
   printf("optind: %d\t" "opterr: %d\t" "optopt: %c (%d)\n" ,
@@ -11,59 +18,65 @@ void print_getopt_state(void) {
 
 int main(int argc, char* argv[]) {
     const char *dev = "/dev/vendor0";
-    int fd = open(dev, O_RDWR);
+    int fd = open(dev, O_RDWR | O_NONBLOCK);
     if (fd < 0) {
         perror("open");
         return 1;
     }
 
-    int character;
-    char *options = ":dt:";
-
-    // character = getopt(argc, argv, options);
-
-    // print_getopt_state();
-    // printf("getopt returned: '%c' (%d)\n", character, character);
-    // print_getopt_state();
-
-    while ((character = getopt(argc, argv, options)) != -1) {
-        switch(character)
+    printf("%d\n",argc);    // print number of arguments
+    argc--; //reduce argc to match array index
+    while (argc >= 1) 
+    {
+        char* param = argv[argc];
+        switch(param[0]) 
         {
             case 's':
                 printf("Here place a device state getter!\n");
+                if (write(fd, SHTC3_CMD_READ_STATE, strlen(SHTC3_CMD_READ_STATE)) < 0) 
+                {
+                    perror("write");close(fd);return 1;
+                }
                 break;
             case 'd':
-                printf("Here place a measurment on demand!\n");
+                printf("Here place a data getter!\n");
+                if (write(fd, SHTC3_CMD_READ_DATA, strlen(SHTC3_CMD_READ_DATA)) < 0) 
+                {
+                    perror("write");close(fd);return 1;
+                }
                 break;
-            case 't':
+            case 'i':
+                printf("Here place a single measure request!\n");
+                if (write(fd, SHTC3_CMD_SET_SINGLE, strlen(SHTC3_CMD_SET_SINGLE)) < 0) 
+                {
+                    perror("write");close(fd);return 1;
+                }
+                break;
+            case 'c':
                 // char *endptr;
                 // int cycle_time = strtol(optarg, &endptr, 10); // Base 10
                 // printf("Przekazany okres pomiaru: %d\n", cycle_time);
-                printf("Cycle time passed: %s\n", optarg);
+                // printf("Cycle time passed: %s\n", optarg);
+                const char msg[64] = {0};
+                snprintf(msg, sizeof(msg), "%s%d", SHTC3_CMD_SET_PERIOD, period);
+                if (write(fd, msg, strlen(msg)) < 0) 
+                {
+                    perror("write");close(fd);return 1;
+                }
                 break;
-            case ':':
-                printf("option needs a value\n");
-                break;
-            case '?':
-                printf("unknown option: %c\n", optopt);
-                break;
-        }
-    }
+            default:
+                printf("Unknown option: %s\n", param);
+            }
 
-    // Write command to device
-    // const char *msg = "HELLO_DEVICE";
-    // if (write(fd, msg, strlen(msg)) < 0) {
-    //     perror("write");
-    //     close(fd);
-    //     return 1;
-    // }
+        argc--;
+    }
 
     // Read response from device
     char buffer[64] = {0};
     int n = 0;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
         n = read(fd, buffer, sizeof(buffer));
-        printf("N %d\n", n);
+        // printf("N %d\n", n);
         if (n < 0) {
             perror("read");
             close(fd);
@@ -72,14 +85,15 @@ int main(int argc, char* argv[]) {
         if(n > 0) {
             break; // Exit loop if we successfully read data
         }
-        sleep(10);
+        sleep(0.1);
     }
-
+    printf("Read ASCI %d bytes: %s\n", n, buffer);
     float temp = 0.0;
     float hum = 0.0;
     memcpy(&temp, buffer, sizeof(float));
     memcpy(&hum, &buffer[4], sizeof(float));
-    printf("Device response: Temp: %.3f, Hum: %.3f\n", temp, hum);
+    printf("Read as measurement: Temp: %.3f, Hum: %.3f\n", temp, hum);
+
 
     close(fd);
     return 0;

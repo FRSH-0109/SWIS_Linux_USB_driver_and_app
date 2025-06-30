@@ -95,6 +95,8 @@ static int vendor_open(struct inode *inode, struct file *file)
 
     file->private_data = dev;
     pr_info("VENDOR USB device open: minor ID: %d\n", subminor);
+    memset(dev->latest_data, 0, sizeof(dev->latest_data)); // Clear latest
+    dev->latest_length = 0; // Reset latest data length
     return 0;
 }
 
@@ -139,11 +141,7 @@ static ssize_t vendor_read(struct file *file, char __user *buffer, size_t count,
 
 static ssize_t vendor_write(struct file *file, const char __user *user_buffer, size_t count, loff_t *ppos)
 {
-    pr_info("VENDOR USB device write: NOT IMPLEMENTED");
-    return 0; // Not implemented, cause timer handles data sending
-
     int wrote_cnt = min((size_t)MAX_PKT_SIZE, count);
-    pr_info("VENDOR USB device write: length: %d\n", wrote_cnt);
     struct usb_vendor *dev = file->private_data;
     int retval;
     char *buf;
@@ -241,11 +239,11 @@ static int vendor_probe(struct usb_interface *interface, const struct usb_device
     vendor_class.fops = &vendor_fops;
 
     /* Data polling from device */
-    dev->POLLING_INTERVAL_MS = 1000;    // Polling interval in ms
-    INIT_WORK(&dev->out_work, vendor_out_work_func);
-    timer_setup(&dev->out_timer, vendor_out_timer_func, 0);
-    // Kick off first timer
-    mod_timer(&dev->out_timer, jiffies + msecs_to_jiffies(dev->POLLING_INTERVAL_MS));
+    // dev->POLLING_INTERVAL_MS = 1000;    // Polling interval in ms
+    // INIT_WORK(&dev->out_work, vendor_out_work_func);
+    // timer_setup(&dev->out_timer, vendor_out_timer_func, 0);
+    // // Kick off first timer
+    // mod_timer(&dev->out_timer, jiffies + msecs_to_jiffies(dev->POLLING_INTERVAL_MS));
 
     return usb_register_dev(interface, &vendor_class);
 }
@@ -256,13 +254,13 @@ static void vendor_disconnect(struct usb_interface *interface) {
     dev = usb_get_intfdata(interface);
     usb_deregister_dev(interface, &vendor_class);
     kfree(dev->irq_in_buffer);
-    kfree(dev);
     usb_kill_urb(dev->int_in_urb);
     usb_free_urb(dev->int_in_urb);
     kfree(dev->int_in_buffer);
     del_timer_sync(&dev->out_timer);
     cancel_work_sync(&dev->out_work);
     mutex_destroy(&dev->data_lock);
+    kfree(dev);
 }
 
 static int __init my_init(void) {
@@ -321,7 +319,10 @@ static void interrupt_in_callback(struct urb *urb)
     struct usb_vendor *dev = urb->context;
 
     if (urb->status == 0) {
-        pr_info("USB INT POLL: %d bytes: %*ph\n", urb->actual_length, urb->actual_length, dev->int_in_buffer);
+       pr_info("USB INT POLL: %d bytes: %*ph | ASCII: %.*s\n",
+                urb->actual_length,
+                urb->actual_length, dev->int_in_buffer,
+                urb->actual_length, dev->int_in_buffer);
         mutex_lock(&dev->data_lock);
         if (urb->actual_length > MAX_PKT_SIZE) {
             pr_warn("Received data exceeds buffer size, truncating\n");
