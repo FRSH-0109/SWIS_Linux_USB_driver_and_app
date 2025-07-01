@@ -4,6 +4,11 @@
 #include <string.h>
 #include <stdint.h>
 
+#include <sys/ioctl.h>
+
+#define WR_PERIOD _IOW('c_usb', 1, int*)
+#define RD_PERIOD _IOR('c_usb', 2, int*)
+
 #define SHTC3_CMD_READ_DATA					"SHTC3 READ"
 #define SHTC3_CMD_READ_STATE				"SHTC3 STATE"
 #define SHTC3_CMD_SET_PERIOD				"SHTC3 PERIOD:"
@@ -17,6 +22,7 @@ void print_getopt_state(void) {
 }
 
 int main(int argc, char* argv[]) {
+    uint32_t value;
     const char *dev = "/dev/vendor0";
     int fd = open(dev, O_RDWR | O_NONBLOCK);
     if (fd < 0) {
@@ -26,28 +32,28 @@ int main(int argc, char* argv[]) {
 
     printf("%d\n",argc);    // print number of arguments
     argc--; //reduce argc to match array index
-    while (argc >= 1) 
+    while (argc >= 1)
     {
         char* param = argv[argc];
-        switch(param[0]) 
+        switch(param[0])
         {
             case 's':
                 printf("Here place a device state getter!\n");
-                if (write(fd, SHTC3_CMD_READ_STATE, strlen(SHTC3_CMD_READ_STATE)) < 0) 
+                if (write(fd, SHTC3_CMD_READ_STATE, strlen(SHTC3_CMD_READ_STATE)) < 0)
                 {
                     perror("write");close(fd);return 1;
                 }
                 break;
             case 'd':
                 printf("Here place a data getter!\n");
-                if (write(fd, SHTC3_CMD_READ_DATA, strlen(SHTC3_CMD_READ_DATA)) < 0) 
+                if (write(fd, SHTC3_CMD_READ_DATA, strlen(SHTC3_CMD_READ_DATA)) < 0)
                 {
                     perror("write");close(fd);return 1;
                 }
                 break;
             case 'i':
                 printf("Here place a single measure request!\n");
-                if (write(fd, SHTC3_CMD_SET_SINGLE, strlen(SHTC3_CMD_SET_SINGLE)) < 0) 
+                if (write(fd, SHTC3_CMD_SET_SINGLE, strlen(SHTC3_CMD_SET_SINGLE)) < 0)
                 {
                     perror("write");close(fd);return 1;
                 }
@@ -59,10 +65,15 @@ int main(int argc, char* argv[]) {
                 // printf("Cycle time passed: %s\n", optarg);
                 const char msg[64] = {0};
                 snprintf(msg, sizeof(msg), "%s%d", SHTC3_CMD_SET_PERIOD, period);
-                if (write(fd, msg, strlen(msg)) < 0) 
+                if (write(fd, msg, strlen(msg)) < 0)
                 {
                     perror("write");close(fd);return 1;
                 }
+                printf("Writing new period value (%d) to driver!\n", period);
+                ioctl(fd, WR_PERIOD, (uint32_t*) &period);
+                ioctl(fd, RD_PERIOD, (uint32_t*) &value);
+                printf("Current period is: %d\n", value);
+
                 break;
             default:
                 printf("Unknown option: %s\n", param);

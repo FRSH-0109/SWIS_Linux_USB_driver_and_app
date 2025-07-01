@@ -7,6 +7,10 @@
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/ioctl.h>
+
+#define WR_PERIOD _IOW('c_usb', 1, uint32_t*)
+#define RD_PERIOD _IOR('c_usb', 2, uint32_t*)
 
 static int vendor_probe(struct usb_interface *interface, const struct usb_device_id *id);
 static void vendor_disconnect(struct usb_interface *interface);
@@ -55,7 +59,7 @@ struct usb_vendor {
     /* Data request staff sent to USB device periodically*/
     struct timer_list out_timer;
     struct work_struct out_work;
-    int POLLING_INTERVAL_MS; // Polling interval in ms
+    uint32_t POLLING_INTERVAL_MS; // Polling interval in ms
 };
 
 static struct usb_class_driver vendor_class = {
@@ -173,12 +177,36 @@ static ssize_t vendor_write(struct file *file, const char __user *user_buffer, s
     return retval ? retval : wrote_cnt;
 }
 
+static long vendor_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
+    struct usb_vendor *dev = file->private_data;
+    switch(cmd) {
+        case WR_PERIOD:
+            if (copy_from_user(&dev->POLLING_INTERVAL_MS, (uint32_t*) arg, sizeof(dev->POLLING_INTERVAL_MS)))
+            {
+                pr_err("Data write : Err!\n");
+            }
+            pr_info("Value = %d\n", dev->POLLING_INTERVAL_MS);
+            break;
+        case RD_PERIOD:
+            if (copy_to_user((uint32_t*) arg, &dev->POLLING_INTERVAL_MS, sizeof(dev->POLLING_INTERVAL_MS)))
+            {
+                pr_err("Data Read: Err!\n");
+            }
+            break;
+        default:
+            pr_info("Invalid ioctl command!");
+            break;
+    }
+    return 0;
+}
+
 static const struct file_operations vendor_fops = {
     .owner = THIS_MODULE,
     .open = vendor_open,
     .release = vendor_release,
     .read = vendor_read,
     .write = vendor_write,
+    .unlocked_ioctl = vendor_ioctl
 };
 
 static int vendor_probe(struct usb_interface *interface, const struct usb_device_id *id) {
