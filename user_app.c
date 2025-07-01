@@ -98,14 +98,24 @@ int main(int argc, char* argv[]) {
             // int cycle_time = strtol(optarg, &endptr, 10); // Base 10
             // printf("Przekazany okres pomiaru: %d\n", cycle_time);
             // printf("Cycle time passed: %s\n", optarg);
-            const char msg[64] = {0};
-            snprintf(msg, sizeof(msg), "%s%d", SHTC3_CMD_SET_PERIOD, period);
-            if (write(fd, msg, strlen(msg)) < 0)
+            if (argc < 3)
             {
-                perror("write");close(fd);return 1;
+                perror("No cycle period given!");
+                close(global_fd);
+                return 1;
             }
-            printf("Writing new period value (%d) to driver!\n", period);
-            ioctl(fd, WR_PERIOD, (uint32_t*) &period);
+            else
+            {
+                char msg[64] = {0};
+                snprintf(msg, sizeof(msg), "%s%s", SHTC3_CMD_SET_PERIOD, argv[2]);
+                if (write(fd, msg, strlen(msg)) < 0)
+                {
+                    perror("write");close(fd);return 1;
+                }
+                printf("Parameter value: %s\n", argv[2]);
+                printf("Writing new period value (%d) to driver!\n", period);
+                ioctl(fd, WR_PERIOD, (uint32_t*) &period);
+            }
         }
         else if (!strncmp(param, FLAG_SENSOR1_GET_PERIOD, min(strlen(param), strlen(FLAG_SENSOR1_GET_PERIOD))))
         {
