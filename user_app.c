@@ -18,6 +18,11 @@
 #define SHTC3_CMD_SET_PERIOD				"SHTC3 PERIOD:"
 #define SHTC3_CMD_GET_PERIOD				"SHTC3 PERIOD?"
 #define SHTC3_CMD_SET_SINGLE				"SHTC3 SINGLE"
+#define BME280_CMD_READ_DATA				"BME280 READ"
+#define BME280_CMD_READ_STATE				"BME280 STATE"
+#define BME280_CMD_SET_PERIOD				"BME280 PERIOD:"
+#define BME280_CMD_GET_PERIOD				"BME280 PERIOD?"
+#define BME280_CMD_SET_SINGLE				"BME280 SINGLE"
 
 #define FLAG_SENSOR1_READ_STATE              "s1"
 #define FLAG_SENSOR1_READ_DATA               "d1"
@@ -125,12 +130,75 @@ int main(int argc, char* argv[]) {
             }
             printf("Current period is: %d\n", value);
         }
+        else if (!strncmp(param, FLAG_SENSOR2_READ_STATE, min(strlen(param), strlen(FLAG_SENSOR2_READ_STATE))))
+        {
+            printf("Here place a device state getter!\n");
+            if (write(fd, BME280_CMD_READ_STATE, strlen(BME280_CMD_READ_STATE)) < 0)
+            {
+                perror("write");close(fd);return 1;
+            }
+        }
+        else if (!strncmp(param, FLAG_SENSOR2_READ_DATA, min(strlen(param), strlen(FLAG_SENSOR2_READ_DATA))))
+        {
+            printf("Here place a data getter!\n");
+            if (write(fd, BME280_CMD_READ_DATA, strlen(BME280_CMD_READ_DATA)) < 0)
+            {
+                perror("write");close(fd);return 1;
+            }
+        }
+        else if (!strncmp(param, FLAG_SENSOR2_SET_SINGLE, min(strlen(param), strlen(FLAG_SENSOR2_SET_SINGLE))))
+        {
+            printf("Here place a single measure request!\n");
+            if (write(fd, BME280_CMD_SET_SINGLE, strlen(BME280_CMD_SET_SINGLE)) < 0)
+            {
+                perror("write");close(fd);return 1;
+            }
+        }
+        else if (!strncmp(param, FLAG_SENSOR2_SET_PERIOD, min(strlen(param), strlen(FLAG_SENSOR2_SET_PERIOD))))
+        {
+            // char *endptr;
+            // int cycle_time = strtol(optarg, &endptr, 10); // Base 10
+            // printf("Przekazany okres pomiaru: %d\n", cycle_time);
+            // printf("Cycle time passed: %s\n", optarg);
+            if (argc < 3)
+            {
+                perror("No cycle period given!");
+                close(global_fd);
+                return -1;
+            }
+            else
+            {
+                char msg[64] = {0};
+                snprintf(msg, sizeof(msg), "%s%s", BME280_CMD_SET_PERIOD, argv[2]);
+                if (write(fd, msg, strlen(msg)) < 0)
+                {
+                    perror("write");close(fd);return 1;
+                }
+                printf("Parameter value: %s\n", argv[2]);
+                printf("Writing new period value (%d) to driver!\n", period);
+                ioctl(fd, WR_PERIOD, (uint32_t*) &period);
+            }
+        }
+        else if (!strncmp(param, FLAG_SENSOR2_GET_PERIOD, min(strlen(param), strlen(FLAG_SENSOR2_GET_PERIOD))))
+        {
+            if (write(fd, BME280_CMD_GET_PERIOD, strlen(BME280_CMD_GET_PERIOD)) < 0)
+            {
+                perror("write");close(fd);return 1;
+            }
+            printf("Current period is: %d\n", value);
+        }
+        else
+        {
+            perror("Invalid flag");
+            close(global_fd);
+            return -2;
+        }
     }
     else
     {
-        perror("No parameters given!");
+        perror("No flags given!");
         close(global_fd);
-        return 1;
+        return -3;
     }
 
     //     switch(param[0])
