@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
                     perror("write");close(fd);return 1;
                 }
                 break;
-            case 'c':
+            case 'c': // Writing a new period od cyclic messeging
                 // char *endptr;
                 // int cycle_time = strtol(optarg, &endptr, 10); // Base 10
                 // printf("Przekazany okres pomiaru: %d\n", cycle_time);
@@ -71,9 +71,11 @@ int main(int argc, char* argv[]) {
                 }
                 printf("Writing new period value (%d) to driver!\n", period);
                 ioctl(fd, WR_PERIOD, (uint32_t*) &period);
+
+                break;
+            case 'v': // Reading current period of cyclic messeging
                 ioctl(fd, RD_PERIOD, (uint32_t*) &value);
                 printf("Current period is: %d\n", value);
-
                 break;
             default:
                 printf("Unknown option: %s\n", param);
