@@ -49,24 +49,25 @@ void handle_signal(int signum) {
     printf("\nCaught signal %d\n", signum);
 
     if (global_fd >= 0) {
+        char msg[64] = {0};
+        // Building a command to stop to the device
+        snprintf(msg, sizeof(msg), "%s%s", SHTC3_CMD_SET_PERIOD, '0');
+        // Sending a command to the driver
+        if (write(global_fd, msg, strlen(msg)) < 0)
+        {
+            perror("write");close(fd);return -1;
+        }
+
+        // Building a command to stop to the device
+        snprintf(msg, sizeof(msg), "%s%s", BME280_CMD_SET_PERIOD, '0');
+        // Sending a command to the driver
+        if (write(global_fd, msg, strlen(msg)) < 0)
+        {
+            perror("write");close(fd);return -1;
+        }
+
         printf("Closing USB file...\n");
         close(global_fd);
-    }
-    char msg[64] = {0};
-    // Building a command to stop to the device
-    snprintf(msg, sizeof(msg), "%s%s", SHTC3_CMD_SET_PERIOD, '0');
-    // Sending a command to the driver
-    if (write(fd, msg, strlen(msg)) < 0)
-    {
-        perror("write");close(fd);return -1;
-    }
-
-    // Building a command to stop to the device
-    snprintf(msg, sizeof(msg), "%s%s", BME280_CMD_SET_PERIOD, '0');
-    // Sending a command to the driver
-    if (write(fd, msg, strlen(msg)) < 0)
-    {
-        perror("write");close(fd);return -1;
     }
 
     exit(0);
