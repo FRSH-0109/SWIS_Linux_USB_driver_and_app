@@ -59,7 +59,6 @@ struct usb_vendor {
     /* Data request staff sent to USB device periodically*/
     struct timer_list out_timer;
     struct work_struct out_work;
-    uint32_t POLLING_INTERVAL_MS; // Polling interval in ms
 };
 
 static struct usb_class_driver vendor_class = {
@@ -175,29 +174,6 @@ static ssize_t vendor_write(struct file *file, const char __user *user_buffer, s
     kfree(buf);
     pr_info("VENDOR USB device write: length: %d\n", wrote_cnt);
     return retval ? retval : wrote_cnt;
-}
-
-static long vendor_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
-    struct usb_vendor *dev = file->private_data;
-    switch(cmd) {
-        case WR_PERIOD:
-            if (copy_from_user(&dev->POLLING_INTERVAL_MS, (uint32_t*) arg, sizeof(dev->POLLING_INTERVAL_MS)))
-            {
-                pr_err("Data write : Err!\n");
-            }
-            pr_info("Value = %d\n", dev->POLLING_INTERVAL_MS);
-            break;
-        // case RD_PERIOD:
-        //     if (copy_to_user((uint32_t*) arg, &dev->POLLING_INTERVAL_MS, sizeof(dev->POLLING_INTERVAL_MS)))
-        //     {
-        //         pr_err("Data Read: Err!\n");
-        //     }
-        //     break;
-        default:
-            pr_info("Invalid ioctl command!");
-            break;
-    }
-    return 0;
 }
 
 static const struct file_operations vendor_fops = {
