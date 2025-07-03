@@ -178,7 +178,6 @@ static const struct file_operations vendor_fops = {
     .release = vendor_release,
     .read = vendor_read,
     .write = vendor_write,
-    .unlocked_ioctl = vendor_ioctl
 };
 
 static int vendor_probe(struct usb_interface *interface, const struct usb_device_id *id) {
