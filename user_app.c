@@ -84,13 +84,11 @@ int main(int argc, char* argv[]) {
     }
     global_fd = fd;
 
-    printf("%d\n",argc);    // print number of arguments
     if (argc > 1) // If there are possible flags in the program calling
     {
         char* param = argv[1];
         if (!strncmp(param, FLAG_SENSOR1_READ_STATE, min(strlen(param), strlen(FLAG_SENSOR1_READ_STATE))))
         {
-            printf("Here place a device state getter!\n");
             // Sending a command to the driver
             if (write(fd, SHTC3_CMD_READ_STATE, strlen(SHTC3_CMD_READ_STATE)) < 0)
             {
@@ -100,7 +98,6 @@ int main(int argc, char* argv[]) {
         }
         else if (!strncmp(param, FLAG_SENSOR1_READ_DATA, min(strlen(param), strlen(FLAG_SENSOR1_READ_DATA))))
         {
-            printf("Here place a data getter!\n");
             // Sending a command to the driver
             if (write(fd, SHTC3_CMD_READ_DATA, strlen(SHTC3_CMD_READ_DATA)) < 0)
             {
@@ -110,7 +107,6 @@ int main(int argc, char* argv[]) {
         }
         else if (!strncmp(param, FLAG_SENSOR1_SET_SINGLE, min(strlen(param), strlen(FLAG_SENSOR1_SET_SINGLE))))
         {
-            printf("Here place a single measure request!\n");
             // Sending a command to the driver
             if (write(fd, SHTC3_CMD_SET_SINGLE, strlen(SHTC3_CMD_SET_SINGLE)) < 0)
             {
@@ -158,7 +154,6 @@ int main(int argc, char* argv[]) {
         }
         else if (!strncmp(param, FLAG_SENSOR2_READ_STATE, min(strlen(param), strlen(FLAG_SENSOR2_READ_STATE))))
         {
-            printf("Here place a device state getter!\n");
             // Sending a command to the driver
             if (write(fd, BME280_CMD_READ_STATE, strlen(BME280_CMD_READ_STATE)) < 0)
             {
@@ -168,7 +163,6 @@ int main(int argc, char* argv[]) {
         }
         else if (!strncmp(param, FLAG_SENSOR2_READ_DATA, min(strlen(param), strlen(FLAG_SENSOR2_READ_DATA))))
         {
-            printf("Here place a data getter!\n");
             // Sending a command to the driver
             if (write(fd, BME280_CMD_READ_DATA, strlen(BME280_CMD_READ_DATA)) < 0)
             {
@@ -178,7 +172,6 @@ int main(int argc, char* argv[]) {
         }
         else if (!strncmp(param, FLAG_SENSOR2_SET_SINGLE, min(strlen(param), strlen(FLAG_SENSOR2_SET_SINGLE))))
         {
-            printf("Here place a single measure request!\n");
             // Sending a command to the driver
             if (write(fd, BME280_CMD_SET_SINGLE, strlen(BME280_CMD_SET_SINGLE)) < 0)
             {
