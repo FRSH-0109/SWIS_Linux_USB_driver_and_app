@@ -7,10 +7,6 @@
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
-#include <linux/ioctl.h>
-
-#define WR_PERIOD _IOW('c', 1, uint32_t*)
-// #define RD_PERIOD _IOR('c', 2, uint32_t*)
 
 static int vendor_probe(struct usb_interface *interface, const struct usb_device_id *id);
 static void vendor_disconnect(struct usb_interface *interface);
