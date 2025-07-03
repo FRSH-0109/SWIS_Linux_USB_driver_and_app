@@ -132,8 +132,6 @@ int main(int argc, char* argv[]) {
                 }
                 printf("Parameter value: %s\n", argv[2]);
                 printf("Writing new period value (%s) to driver!\n", argv[2]);
-                // Writing a new period value to the usb_vendor struct
-                ioctl(fd, WR_PERIOD, (uint32_t*) &period);
                 if (*argv[2] == '0')
                 {
                     close(global_fd);
@@ -197,8 +195,6 @@ int main(int argc, char* argv[]) {
                 }
                 printf("Parameter value: %s\n", argv[2]);
                 printf("Writing new period value (%s) to driver!\n", argv[2]);
-                // Writing a new period value to the usb_vendor struct
-                ioctl(fd, WR_PERIOD, (uint32_t*) &period);
                 if (*argv[2] == '0')
                 {
                     close(global_fd);
