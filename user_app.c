@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
     int fd = open(dev, O_RDWR | O_NONBLOCK);
     if (fd < 0) {
         perror("open");
-        return 1;
+        return -1;
     }
     global_fd = fd;
 
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
             // Sending a command to the driver
             if (write(fd, SHTC3_CMD_READ_STATE, strlen(SHTC3_CMD_READ_STATE)) < 0)
             {
-                perror("write");close(fd);return 1;
+                perror("write");close(fd);return -1;
             }
             single_mes = 1;
         }
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
             // Sending a command to the driver
             if (write(fd, SHTC3_CMD_READ_DATA, strlen(SHTC3_CMD_READ_DATA)) < 0)
             {
-                perror("write");close(fd);return 1;
+                perror("write");close(fd);return -1;
             }
             single_mes = 1;
         }
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
             // Sending a command to the driver
             if (write(fd, SHTC3_CMD_SET_SINGLE, strlen(SHTC3_CMD_SET_SINGLE)) < 0)
             {
-                perror("write");close(fd);return 1;
+                perror("write");close(fd);return -1;
             }
             single_mes = 1;
         }
@@ -113,7 +113,13 @@ int main(int argc, char* argv[]) {
             {
                 perror("No cycle period given!");
                 close(global_fd);
-                return 1;
+                return -2;
+            }
+            else if (*argv[2] == '0')
+            {
+                perror("Period must be more than 0");
+                close(global_fd);
+                return -3;
             }
             else
             {
@@ -123,7 +129,7 @@ int main(int argc, char* argv[]) {
                 // Sending a command to the driver
                 if (write(fd, msg, strlen(msg)) < 0)
                 {
-                    perror("write");close(fd);return 1;
+                    perror("write");close(fd);return -1;
                 }
                 printf("Parameter value: %s\n", argv[2]);
                 printf("Writing new period value (%s) to driver!\n", argv[2]);
@@ -136,7 +142,7 @@ int main(int argc, char* argv[]) {
             // Sending a command to the driver
             if (write(fd, SHTC3_CMD_GET_PERIOD, strlen(SHTC3_CMD_GET_PERIOD)) < 0)
             {
-                perror("write");close(fd);return 1;
+                perror("write");close(fd);return -1;
             }
             printf("Current period is: %d\n", value);
             single_mes = 1;
@@ -147,7 +153,7 @@ int main(int argc, char* argv[]) {
             // Sending a command to the driver
             if (write(fd, BME280_CMD_READ_STATE, strlen(BME280_CMD_READ_STATE)) < 0)
             {
-                perror("write");close(fd);return 1;
+                perror("write");close(fd);return -1;
             }
             single_mes = 1;
         }
@@ -157,7 +163,7 @@ int main(int argc, char* argv[]) {
             // Sending a command to the driver
             if (write(fd, BME280_CMD_READ_DATA, strlen(BME280_CMD_READ_DATA)) < 0)
             {
-                perror("write");close(fd);return 1;
+                perror("write");close(fd);return -1;
             }
             single_mes = 1;
         }
@@ -167,7 +173,7 @@ int main(int argc, char* argv[]) {
             // Sending a command to the driver
             if (write(fd, BME280_CMD_SET_SINGLE, strlen(BME280_CMD_SET_SINGLE)) < 0)
             {
-                perror("write");close(fd);return 1;
+                perror("write");close(fd);return -1;
             }
             single_mes = 1;
         }
@@ -177,7 +183,13 @@ int main(int argc, char* argv[]) {
             {
                 perror("No cycle period given!");
                 close(global_fd);
-                return -1;
+                return -2;
+            }
+            else if (*argv[2] ==  '0')
+            {
+                perror("Period must be more than 0");
+                close(global_fd);
+                return -3;
             }
             else
             {
@@ -187,7 +199,7 @@ int main(int argc, char* argv[]) {
                 // Sending a command to the driver
                 if (write(fd, msg, strlen(msg)) < 0)
                 {
-                    perror("write");close(fd);return 1;
+                    perror("write");close(fd);return -1;
                 }
                 printf("Parameter value: %s\n", argv[2]);
                 printf("Writing new period value (%s) to driver!\n", argv[2]);
@@ -200,7 +212,7 @@ int main(int argc, char* argv[]) {
             // Sending a command to the driver
             if (write(fd, BME280_CMD_GET_PERIOD, strlen(BME280_CMD_GET_PERIOD)) < 0)
             {
-                perror("write");close(fd);return 1;
+                perror("write");close(fd);return -1;
             }
             printf("Current period is: %d\n", value);
             single_mes = 1;
@@ -209,14 +221,14 @@ int main(int argc, char* argv[]) {
         {
             perror("Invalid flag");
             close(global_fd);
-            return -2;
+            return -4;
         }
     }
     else
     {
         perror("No flags given!");
         close(global_fd);
-        return -3;
+        return -4;
     }
 
     while(1) { // Universal data receiving
