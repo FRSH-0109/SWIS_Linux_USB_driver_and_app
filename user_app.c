@@ -240,12 +240,7 @@ int main(int argc, char* argv[]) {
         n = read(fd, buffer, sizeof(buffer));
         // printf("N %d\n", n);
         if (n > 0) { // Print response from device
-            printf("Read ASCI %d bytes: %s\n", n, buffer);
-            float temp = 0.0;
-            float hum = 0.0;
-            memcpy(&temp, buffer, sizeof(float));
-            memcpy(&hum, &buffer[4], sizeof(float));
-            printf("Read as measurement: Temp: %.3f, Hum: %.3f\n", temp, hum);
+            printf("%s\n\r", buffer);
             if (single_mes) {
                 break;
             }
