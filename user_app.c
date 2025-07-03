@@ -6,8 +6,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <sys/ioctl.h>
-
 #define min(a,b) ((a) < (b) ? (a) : (b))  // Declaring min function
 
 // IOCTL commands for the driver
@@ -41,12 +39,16 @@
 uint32_t period; // Variable to pass measurment cycle period [ms]
 int global_fd = -1; // Global variable to handle closing signals
 
+// Protection from data race between handle_signal and while loop in main
+volatile sig_atomic_t stop = 0;
+
 void handle_signal(int signum) {
     /*
     Function used to handle cases of forced app closing
     For example closing app in the cyclic measurment mode.
     */
     printf("\nCaught signal %d\n", signum);
+    stop = 1;
 
     if (global_fd >= 0) {
         char msg[64] = {0};
@@ -231,7 +233,7 @@ int main(int argc, char* argv[]) {
         return -4;
     }
 
-    while(1) { // Universal data receiving
+    while(!stop) { // Universal data receiving
 
         int n = 0;
         char buffer[64] = {0};
