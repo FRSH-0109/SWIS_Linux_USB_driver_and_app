@@ -144,7 +144,6 @@ int main(int argc, char* argv[]) {
             {
                 perror("write");close(fd);return -1;
             }
-            printf("Current period is: %d\n", value);
             single_mes = 1;
         }
         else if (!strncmp(param, FLAG_SENSOR2_READ_STATE, min(strlen(param), strlen(FLAG_SENSOR2_READ_STATE))))
@@ -214,7 +213,6 @@ int main(int argc, char* argv[]) {
             {
                 perror("write");close(fd);return -1;
             }
-            printf("Current period is: %d\n", value);
             single_mes = 1;
         }
         else // If an unrecogniesed flags were given
