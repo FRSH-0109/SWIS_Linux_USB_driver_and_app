@@ -52,6 +52,22 @@ void handle_signal(int signum) {
         printf("Closing USB file...\n");
         close(global_fd);
     }
+    char msg[64] = {0};
+    // Building a command to stop to the device
+    snprintf(msg, sizeof(msg), "%s%s", SHTC3_CMD_SET_PERIOD, '0');
+    // Sending a command to the driver
+    if (write(fd, msg, strlen(msg)) < 0)
+    {
+        perror("write");close(fd);return -1;
+    }
+
+    // Building a command to stop to the device
+    snprintf(msg, sizeof(msg), "%s%s", BME280_CMD_SET_PERIOD, '0');
+    // Sending a command to the driver
+    if (write(fd, msg, strlen(msg)) < 0)
+    {
+        perror("write");close(fd);return -1;
+    }
 
     exit(0);
 }
@@ -115,12 +131,6 @@ int main(int argc, char* argv[]) {
                 close(global_fd);
                 return -2;
             }
-            else if (*argv[2] == '0')
-            {
-                perror("Period must be more than 0");
-                close(global_fd);
-                return -3;
-            }
             else
             {
                 char msg[64] = {0};
@@ -135,6 +145,11 @@ int main(int argc, char* argv[]) {
                 printf("Writing new period value (%s) to driver!\n", argv[2]);
                 // Writing a new period value to the usb_vendor struct
                 ioctl(fd, WR_PERIOD, (uint32_t*) &period);
+                if (*argv[2] == '0')
+                {
+                    close(global_fd);
+                    return 0;
+                }
             }
         }
         else if (!strncmp(param, FLAG_SENSOR1_GET_PERIOD, min(strlen(param), strlen(FLAG_SENSOR1_GET_PERIOD))))
@@ -184,12 +199,6 @@ int main(int argc, char* argv[]) {
                 close(global_fd);
                 return -2;
             }
-            else if (*argv[2] ==  '0')
-            {
-                perror("Period must be more than 0");
-                close(global_fd);
-                return -3;
-            }
             else
             {
                 char msg[64] = {0};
@@ -204,6 +213,11 @@ int main(int argc, char* argv[]) {
                 printf("Writing new period value (%s) to driver!\n", argv[2]);
                 // Writing a new period value to the usb_vendor struct
                 ioctl(fd, WR_PERIOD, (uint32_t*) &period);
+                if (*argv[2] == '0')
+                {
+                    close(global_fd);
+                    return 0;
+                }
             }
         }
         else if (!strncmp(param, FLAG_SENSOR2_GET_PERIOD, min(strlen(param), strlen(FLAG_SENSOR2_GET_PERIOD))))
