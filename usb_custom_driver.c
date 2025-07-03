@@ -9,8 +9,8 @@
 #include <linux/slab.h>
 #include <linux/ioctl.h>
 
-#define WR_PERIOD _IOW("c_usb", 1, uint32_t*)
-#define RD_PERIOD _IOR("c_usb", 2, uint32_t*)
+#define WR_PERIOD _IOW('c', 1, uint32_t*)
+// #define RD_PERIOD _IOR('c', 2, uint32_t*)
 
 static int vendor_probe(struct usb_interface *interface, const struct usb_device_id *id);
 static void vendor_disconnect(struct usb_interface *interface);
@@ -187,12 +187,12 @@ static long vendor_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             }
             pr_info("Value = %d\n", dev->POLLING_INTERVAL_MS);
             break;
-        case RD_PERIOD:
-            if (copy_to_user((uint32_t*) arg, &dev->POLLING_INTERVAL_MS, sizeof(dev->POLLING_INTERVAL_MS)))
-            {
-                pr_err("Data Read: Err!\n");
-            }
-            break;
+        // case RD_PERIOD:
+        //     if (copy_to_user((uint32_t*) arg, &dev->POLLING_INTERVAL_MS, sizeof(dev->POLLING_INTERVAL_MS)))
+        //     {
+        //         pr_err("Data Read: Err!\n");
+        //     }
+        //     break;
         default:
             pr_info("Invalid ioctl command!");
             break;
@@ -347,7 +347,7 @@ static void interrupt_in_callback(struct urb *urb)
     struct usb_vendor *dev = urb->context;
 
     if (urb->status == 0) {
-       pr_info("USB INT POLL: %d bytes: %*ph | ASCII: %.*s\n",
+        pr_info("USB INT POLL: %d bytes: %*ph | ASCII: %.*s\n",
                 urb->actual_length,
                 urb->actual_length, dev->int_in_buffer,
                 urb->actual_length, dev->int_in_buffer);
