@@ -85,9 +85,7 @@ int main(int argc, char* argv[]) {
             {
                 perror("write");close(fd);return 1;
             }
-            // Closing app
-            close(global_fd);
-            return 0;
+            single_mes = 1;
         }
         else if (!strncmp(param, FLAG_SENSOR1_READ_DATA, min(strlen(param), strlen(FLAG_SENSOR1_READ_DATA))))
         {
@@ -97,9 +95,7 @@ int main(int argc, char* argv[]) {
             {
                 perror("write");close(fd);return 1;
             }
-            // Closing app
-            close(global_fd);
-            return 0;
+            single_mes = 1;
         }
         else if (!strncmp(param, FLAG_SENSOR1_SET_SINGLE, min(strlen(param), strlen(FLAG_SENSOR1_SET_SINGLE))))
         {
@@ -109,17 +105,10 @@ int main(int argc, char* argv[]) {
             {
                 perror("write");close(fd);return 1;
             }
-
-            // Making single measurment
-            int n = 0;
-            char buffer[64] = {0};
+            single_mes = 1;
         }
         else if (!strncmp(param, FLAG_SENSOR1_SET_PERIOD, min(strlen(param), strlen(FLAG_SENSOR1_SET_PERIOD))))
         {
-            // char *endptr;
-            // int cycle_time = strtol(optarg, &endptr, 10); // Base 10
-            // printf("Przekazany okres pomiaru: %d\n", cycle_time);
-            // printf("Cycle time passed: %s\n", optarg);
             if (argc < 3) // Checikng if the cycle period were given
             {
                 perror("No cycle period given!");
@@ -140,7 +129,6 @@ int main(int argc, char* argv[]) {
                 printf("Writing new period value (%s) to driver!\n", argv[2]);
                 // Writing a new period value to the usb_vendor struct
                 ioctl(fd, WR_PERIOD, (uint32_t*) &period);
-                single_mes = 1;
             }
         }
         else if (!strncmp(param, FLAG_SENSOR1_GET_PERIOD, min(strlen(param), strlen(FLAG_SENSOR1_GET_PERIOD))))
@@ -151,9 +139,7 @@ int main(int argc, char* argv[]) {
                 perror("write");close(fd);return 1;
             }
             printf("Current period is: %d\n", value);
-            // Closing app
-            close(global_fd);
-            return 0;
+            single_mes = 1;
         }
         else if (!strncmp(param, FLAG_SENSOR2_READ_STATE, min(strlen(param), strlen(FLAG_SENSOR2_READ_STATE))))
         {
@@ -163,9 +149,7 @@ int main(int argc, char* argv[]) {
             {
                 perror("write");close(fd);return 1;
             }
-            // Closing app
-            close(global_fd);
-            return 0;
+            single_mes = 1;
         }
         else if (!strncmp(param, FLAG_SENSOR2_READ_DATA, min(strlen(param), strlen(FLAG_SENSOR2_READ_DATA))))
         {
@@ -175,9 +159,7 @@ int main(int argc, char* argv[]) {
             {
                 perror("write");close(fd);return 1;
             }
-            // Closing app
-            close(global_fd);
-            return 0;
+            single_mes = 1;
         }
         else if (!strncmp(param, FLAG_SENSOR2_SET_SINGLE, min(strlen(param), strlen(FLAG_SENSOR2_SET_SINGLE))))
         {
@@ -187,13 +169,10 @@ int main(int argc, char* argv[]) {
             {
                 perror("write");close(fd);return 1;
             }
+            single_mes = 1;
         }
         else if (!strncmp(param, FLAG_SENSOR2_SET_PERIOD, min(strlen(param), strlen(FLAG_SENSOR2_SET_PERIOD))))
         {
-            // char *endptr;
-            // int cycle_time = strtol(optarg, &endptr, 10); // Base 10
-            // printf("Przekazany okres pomiaru: %d\n", cycle_time);
-            // printf("Cycle time passed: %s\n", optarg);
             if (argc < 3)
             {
                 perror("No cycle period given!");
@@ -214,7 +193,6 @@ int main(int argc, char* argv[]) {
                 printf("Writing new period value (%s) to driver!\n", argv[2]);
                 // Writing a new period value to the usb_vendor struct
                 ioctl(fd, WR_PERIOD, (uint32_t*) &period);
-                single_mes = 1;
             }
         }
         else if (!strncmp(param, FLAG_SENSOR2_GET_PERIOD, min(strlen(param), strlen(FLAG_SENSOR2_GET_PERIOD))))
@@ -225,9 +203,7 @@ int main(int argc, char* argv[]) {
                 perror("write");close(fd);return 1;
             }
             printf("Current period is: %d\n", value);
-            // Closing app
-            close(global_fd);
-            return 0;
+            single_mes = 1;
         }
         else // If an unrecogniesed flags were given
         {
@@ -244,11 +220,7 @@ int main(int argc, char* argv[]) {
     }
 
     while(1) { // Universal data receiving
-        /*
-        if(read) {
-            wyświetl dane z buforu // W tej wersji read sprawdza i wyciąga dane z kolejki fifo w sterowniku
-        }
-        */
+
         int n = 0;
         char buffer[64] = {0};
 
