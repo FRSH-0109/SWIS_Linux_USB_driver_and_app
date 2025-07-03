@@ -282,36 +282,6 @@ static void __exit my_exit(void) {
 module_init(my_init);
 module_exit(my_exit);
 
-/* Fucntion for handling data request timer callback */
-static void vendor_out_timer_func(struct timer_list *t)
-{
-    struct usb_vendor *dev = from_timer(dev, t, out_timer);
-
-    pr_warn("TIMERRRRRR\n");
-    schedule_work(&dev->out_work); // schedule OUT transfer
-
-    // restart timer
-    mod_timer(&dev->out_timer, jiffies + msecs_to_jiffies(dev->POLLING_INTERVAL_MS));
-}
-
-/* Worker function for data request sending*/
-static void vendor_out_work_func(struct work_struct *work)
-{
-    struct usb_vendor *dev = container_of(work, struct usb_vendor, out_work);
-    memcpy(dev->cmd, CMD_SHTC3_READ, sizeof(CMD_SHTC3_READ));
-    int retval;
-
-    pr_warn("WOKRERRRR\n");
-    retval = usb_interrupt_msg(dev->udev,
-                  usb_sndintpipe(dev->udev, dev->irq_out_endpointAddr),
-                  dev->cmd, sizeof(dev->cmd), NULL, 1000);
-
-    if (retval)
-        pr_err("USB OUT transfer failed: %d\n", retval);
-    else
-        pr_debug("USB OUT transfer sent.\n");
-}
-
 // callback function for interrupt IN URB
 static void interrupt_in_callback(struct urb *urb)
 {
